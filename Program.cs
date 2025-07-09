@@ -52,8 +52,9 @@ class Program
         Console.WriteLine("3. Database Migration (PostgreSQL to PostgreSQL)");
         Console.WriteLine("4. All Operations");
         Console.WriteLine("5. Backup Only (SourceDatabase to TempLocalPath)");
-        Console.WriteLine("6. Exit");
-        Console.Write("\nEnter your choice (1-6): ");
+        Console.WriteLine("6. Restore Only (DestinationDatabase, specify dump path)");
+        Console.WriteLine("7. Exit");
+        Console.Write("\nEnter your choice (1-7): ");
 
 		string? choice = Console.ReadLine()?.Trim();
 
@@ -61,6 +62,7 @@ class Program
         bool performStorageMigration = false;
         bool performDatabaseMigration = false;
         bool performBackupOnly = false;
+        bool performRestoreOnly = false;
 
         switch (choice)
         {
@@ -82,6 +84,9 @@ class Program
                 performBackupOnly = true;
                 break;
             case "6":
+                performRestoreOnly = true;
+                break;
+            case "7":
                 Console.WriteLine("Exiting...");
                 return;
             default:
@@ -119,6 +124,47 @@ class Program
             {
                 Console.WriteLine("\n--- Backup Skipped ---");
                 Console.WriteLine("Source database settings are not configured. Please check your appsettings.json file.");
+            }
+            return;
+        }
+
+        // --- Restore Only Workflow ---
+        if (performRestoreOnly)
+        {
+            if (databaseMigrationSettings.DestinationDatabase != null)
+            {
+                Console.WriteLine("\n--- Starting Restore Only (DestinationDatabase, specify dump path) ---");
+                Console.Write("Enter the full path to the dump file: ");
+                string? dumpPath = Console.ReadLine();
+                if (string.IsNullOrWhiteSpace(dumpPath))
+                {
+                    Console.WriteLine("No dump file path provided. Aborting restore.");
+                    return;
+                }
+                try
+                {
+                    bool restoreSuccess = await RestoreDatabaseAsync(databaseMigrationSettings.DestinationDatabase, dumpPath, databaseMigrationSettings.DropDestinationIfExists);
+                    if (restoreSuccess)
+                    {
+                        Console.WriteLine("Restore completed successfully.");
+                    }
+                    else
+                    {
+                        Console.WriteLine("Restore failed.");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.Error.WriteLine($"\nRestore failed: {ex.Message}");
+                    Console.Error.WriteLine(ex.StackTrace);
+                    Console.ResetColor();
+                }
+            }
+            else
+            {
+                Console.WriteLine("\n--- Restore Skipped ---");
+                Console.WriteLine("Destination database settings are not configured. Please check your appsettings.json file.");
             }
             return;
         }
