@@ -51,14 +51,16 @@ class Program
         Console.WriteLine("2. Storage Account Migration");
         Console.WriteLine("3. Database Migration (PostgreSQL to PostgreSQL)");
         Console.WriteLine("4. All Operations");
-        Console.WriteLine("5. Exit");
-        Console.Write("\nEnter your choice (1-5): ");
+        Console.WriteLine("5. Backup Only (SourceDatabase to TempLocalPath)");
+        Console.WriteLine("6. Exit");
+        Console.Write("\nEnter your choice (1-6): ");
 
 		string? choice = Console.ReadLine()?.Trim();
 
-		        bool performDbSync = false;
+        bool performDbSync = false;
         bool performStorageMigration = false;
         bool performDatabaseMigration = false;
+        bool performBackupOnly = false;
 
         switch (choice)
         {
@@ -77,11 +79,48 @@ class Program
                 performDatabaseMigration = true;
                 break;
             case "5":
+                performBackupOnly = true;
+                break;
+            case "6":
                 Console.WriteLine("Exiting...");
                 return;
             default:
                 Console.WriteLine("Invalid choice. Exiting...");
                 return;
+        }
+
+        // --- Backup Only Workflow ---
+        if (performBackupOnly)
+        {
+            if (databaseMigrationSettings.SourceDatabase != null)
+            {
+                Console.WriteLine("\n--- Starting Backup Only (SourceDatabase to TempLocalPath) ---");
+                try
+                {
+                    string backupFilePath = await CreateDatabaseBackupAsync(databaseMigrationSettings.SourceDatabase, databaseMigrationSettings.TempLocalPath);
+                    if (!string.IsNullOrEmpty(backupFilePath))
+                    {
+                        Console.WriteLine($"Backup created at: {backupFilePath}");
+                    }
+                    else
+                    {
+                        Console.WriteLine("Backup failed.");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.Error.WriteLine($"\nBackup failed: {ex.Message}");
+                    Console.Error.WriteLine(ex.StackTrace);
+                    Console.ResetColor();
+                }
+            }
+            else
+            {
+                Console.WriteLine("\n--- Backup Skipped ---");
+                Console.WriteLine("Source database settings are not configured. Please check your appsettings.json file.");
+            }
+            return;
         }
 
 		// --- Database Sync Workflow ---
